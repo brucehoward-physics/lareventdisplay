@@ -61,6 +61,7 @@
 #include "art/Framework/Services/Registry/ServiceHandle.h"
 #include "art/Utilities/make_tool.h"
 #include "canvas/Persistency/Common/FindMany.h"
+#include "canvas/Persistency/Common/FindManyP.h"
 #include "canvas/Persistency/Common/Ptr.h"
 #include "canvas/Persistency/Common/PtrVector.h"
 #include "cetlib_except/exception.h"
@@ -758,7 +759,7 @@ namespace evd {
       for (size_t isl = 0; isl < slices.size(); ++isl) {
         int slcID(std::abs(slices[isl]->ID()));
         int color(evd::kColor[slcID % evd::kNCOLS]);
-        if (recoOpt->fDrawSlices < 3) {
+        if (recoOpt->fDrawSlices < 3 || recoOpt->fDrawSlices==99) {
           // draw color-coded hits
           std::vector<const recob::Hit*> hits = fmh.at(isl);
           std::vector<const recob::Hit*> hits_on_plane;
@@ -773,10 +774,52 @@ namespace evd {
             double wire = geo->WireCoordinate(slicePos, planeID);
             std::string s = std::to_string(slcID);
             char const* txt = s.c_str();
-            TText& slcID = view->AddText(wire, tick, txt);
-            slcID.SetTextSize(0.05);
-            slcID.SetTextColor(color);
+            TText& slcID_txt = view->AddText(wire, tick, txt);
+            slcID_txt.SetTextSize(0.05);
+            slcID_txt.SetTextColor(color);
           } // draw ID
+	  if (recoOpt->fDrawSlices == 99) {
+	    // BH: Draw opt 99 is for a Pandora pass, where the slice will also be expected to have a primary vertex
+	    //
+	    // This part to get the primary in the slice and its vertex is basically borrowed/stolen from sbncode/CAFMaker/CAFMaker_module.cxx
+	    // a -- this part gets the pfparticles
+	    std::vector<art::Ptr<recob::Slice>> sliceList {slices[isl]};
+	    art::FindManyP<recob::PFParticle> findManyPFParts(sliceList, evt, which);
+	    std::vector<art::Ptr<recob::PFParticle>> fmPFPart;
+	    if (findManyPFParts.isValid()) {
+	      fmPFPart = findManyPFParts.at(0);
+	    }
+	    art::FindManyP<recob::Vertex> fmVertex(fmPFPart, evt, which);
+	    // b -- this part gets the vertex
+	    size_t iPart;
+	    for (iPart = 0; iPart < fmPFPart.size(); ++iPart ) {
+	      const recob::PFParticle &thisParticle = *fmPFPart[iPart];
+	      if (thisParticle.IsPrimary()) break;
+	    }
+	    const recob::Vertex *vertex = (iPart == fmPFPart.size() || !fmVertex.at(iPart).size()) ? NULL : fmVertex.at(iPart).at(0).get();
+
+	    // Now, let's use our position as the vertex position
+	    geo::Point_t slicePos(vertex->position().X(), vertex->position().Y(), vertex->position().Z());
+
+	    // Now, we can follow a path like above
+	    double tick = detProp.ConvertXToTicks(vertex->position().X(), planeID);
+            double wire = geo->WireCoordinate(slicePos, planeID);
+	    std::string s = std::to_string(slcID);
+            char const* txt = s.c_str();
+            TText& slcID_txt = view->AddText(wire, tick, txt);
+            slcID_txt.SetTextSize(0.1);
+            slcID_txt.SetTextColor(color);
+
+	    // Debug info
+	    //std::cout << "Debug info for slice mode 99" << std::endl;
+	    //std::cout << "Drawing slice " << s << " with position:" << std::endl;
+	    //std::cout << "  Plane = " << planeID << std::endl;
+	    //std::cout << "  X,Y,Z = " << slicePos.X() << ", " << slicePos.Y() << ", " << slicePos.Z() << std::endl;
+	    //std::cout << "  Wire  = " << wire << std::endl;
+	    //std::cout << "  Tick  = " << tick << std::endl;
+	    //std::cout << "and its color is: " << color << std::endl;
+	    //std::cout << "----------------------------" << std::endl;
+	  } // draw ID pandora
         }
         else {
           // draw the center, end points and direction vector
