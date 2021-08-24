@@ -789,18 +789,37 @@ namespace evd {
 	    if (findManyPFParts.isValid()) {
 	      fmPFPart = findManyPFParts.at(0);
 	    }
-	    art::FindManyP<recob::Vertex> fmVertex(fmPFPart, evt, which);
+	    else {
+	      //std::cout << "Debug info for slice mode 99" << std::endl;
+	      //std::cout << " findManyPFParts not valid" << std::endl;
+	      //std::cout << " for slice " << std::to_string(slcID) << " with color " << color << std::endl;
+	      //std::cout << "----------------------------" << std::endl;
+	      continue;
+	    }
 	    // b -- this part gets the vertex
+	    art::FindManyP<recob::Vertex> fmVertex(fmPFPart, evt, which);
+	    if (!fmVertex.isValid()) {
+	      //std::cout << "Debug info for slice mode 99" << std::endl;
+	      //std::cout << " fmVertex not valid" << std::endl;
+	      //std::cout << " for slice " << std::to_string(slcID) << " with color " << color << std::endl;
+	      //std::cout << "----------------------------" << std::endl;
+	      continue;
+            }
 	    size_t iPart;
 	    for (iPart = 0; iPart < fmPFPart.size(); ++iPart ) {
 	      const recob::PFParticle &thisParticle = *fmPFPart[iPart];
 	      if (thisParticle.IsPrimary()) break;
 	    }
 	    const recob::Vertex *vertex = (iPart == fmPFPart.size() || !fmVertex.at(iPart).size()) ? NULL : fmVertex.at(iPart).at(0).get();
-
+	    if (!vertex) {
+	      //std::cout << "Debug info for slice mode 99" << std::endl;
+	      //std::cout << " NO vertex for slice " << std::to_string(slcID) << std::endl;
+	      //std::cout << " with color " << color << std::endl;
+	      //std::cout << "----------------------------" << std::endl;
+	      continue;
+	    }
 	    // Now, let's use our position as the vertex position
 	    geo::Point_t slicePos(vertex->position().X(), vertex->position().Y(), vertex->position().Z());
-
 	    // Now, we can follow a path like above
 	    double tick = detProp.ConvertXToTicks(vertex->position().X(), planeID);
             double wire = geo->WireCoordinate(slicePos, planeID);
@@ -809,8 +828,7 @@ namespace evd {
             TText& slcID_txt = view->AddText(wire, tick, txt);
             slcID_txt.SetTextSize(0.1);
             slcID_txt.SetTextColor(color);
-
-	    // Debug info
+	    // Print debug info
 	    //std::cout << "Debug info for slice mode 99" << std::endl;
 	    //std::cout << "Drawing slice " << s << " with position:" << std::endl;
 	    //std::cout << "  Plane = " << planeID << std::endl;
