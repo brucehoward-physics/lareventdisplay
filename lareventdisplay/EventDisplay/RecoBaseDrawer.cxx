@@ -38,6 +38,7 @@
 #include "lardataobj/RecoBase/OpFlash.h"
 #include "lardataobj/RecoBase/PCAxis.h"
 #include "lardataobj/RecoBase/PFParticle.h"
+#include "lardataobj/RecoBase/PFParticleMetadata.h"
 #include "lardataobj/RecoBase/Seed.h"
 #include "lardataobj/RecoBase/Shower.h"
 #include "lardataobj/RecoBase/SpacePoint.h"
@@ -759,7 +760,7 @@ namespace evd {
       for (size_t isl = 0; isl < slices.size(); ++isl) {
         int slcID(std::abs(slices[isl]->ID()));
         int color(evd::kColor[slcID % evd::kNCOLS]);
-        if (recoOpt->fDrawSlices < 3 || recoOpt->fDrawSlices==99) {
+        if (recoOpt->fDrawSlices < 3 || recoOpt->fDrawSlices>=99) {
           // draw color-coded hits
           std::vector<const recob::Hit*> hits = fmh.at(isl);
           std::vector<const recob::Hit*> hits_on_plane;
@@ -778,7 +779,7 @@ namespace evd {
             slcID_txt.SetTextSize(0.05);
             slcID_txt.SetTextColor(color);
           } // draw ID
-	  if (recoOpt->fDrawSlices == 99) {
+	  if (recoOpt->fDrawSlices >= 99) {
 	    // BH: Draw opt 99 is for a Pandora pass, where the slice will also be expected to have a primary vertex
 	    //
 	    // This part to get the primary in the slice and its vertex is basically borrowed/stolen from sbncode/CAFMaker/CAFMaker_module.cxx
@@ -824,6 +825,26 @@ namespace evd {
 	    double tick = detProp.ConvertXToTicks(vertex->position().X(), planeID);
             double wire = geo->WireCoordinate(slicePos, planeID);
 	    std::string s = std::to_string(slcID);
+	    // If drawOpt == 100, then also enter what slice corresponds to (also takes from the SBNCode CAFMaker_module)
+	    if (recoOpt->fDrawSlices == 100) {
+	      art::FindManyP<larpandoraobj::PFParticleMetadata> fmPFPMeta(fmPFPart, evt, which);
+	      if (!fmPFPMeta.isValid()) {
+		continue;
+	      }
+	      const larpandoraobj::PFParticleMetadata *primary_meta = (iPart == fmPFPart.size()) ? NULL : fmPFPMeta.at(iPart).at(0).get();
+	      if (!primary_meta) {
+		continue;
+	      }
+	      auto const &properties = primary_meta->GetPropertiesMap();
+	      if (properties.count("IsClearCosmic")) {
+		assert(!properties.count("IsNeutrino"));
+		s+=" (CC)";
+	      }
+	      else {
+		assert(properties.count("IsNeutrino"));
+		s+=" (Nu)";
+	      }
+	    }
             char const* txt = s.c_str();
             TText& slcID_txt = view->AddText(wire, tick, txt);
             slcID_txt.SetTextSize(0.1);

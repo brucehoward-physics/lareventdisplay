@@ -46,6 +46,7 @@ art_make_library(
     larsim_Simulation
     nusimdata_SimulationBase
     nuevdb_EventDisplayBase
+    larpandora_LArPandoraInterface
 )
 
 simple_plugin(GraphCluster "module" lareventdisplay_EventDisplay)
