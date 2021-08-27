@@ -1534,6 +1534,16 @@ namespace evd {
             TText& trkID = view->AddText(wire, tick, txt);
             trkID.SetTextColor(evd::kColor[tid % evd::kNCOLS]);
             trkID.SetTextSize(0.1);
+
+            // BH: also draw it at the beginning (exactly as above) - useful if crossing cathode
+            geo::Point_t trackPosSt(track.vals().at(t)->Start().X(),
+                                    track.vals().at(t)->Start().Y(),
+                                    track.vals().at(t)->Start().Z());
+            double tickSt = 30 + detProp.ConvertXToTicks(trackPosSt.X(), plane, tpc, cstat);
+            double wireSt = geo->WireCoordinate(trackPosSt, geo::PlaneID(cstat, tpc, plane));
+            TText& trkIDSt = view->AddText(wireSt, tickSt, txt);
+            trkIDSt.SetTextColor(evd::kColor[tid % evd::kNCOLS]);
+            trkIDSt.SetTextSize(0.1);
           }
 
           float Score = -999;
