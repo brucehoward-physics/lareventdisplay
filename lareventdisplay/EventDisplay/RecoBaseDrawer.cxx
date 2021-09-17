@@ -1346,7 +1346,8 @@ namespace evd {
       this->Hit2D(hits, color, view, false, false, lineWidth);
       if (recoOpt->fDrawShowers >= 1) {
         //draw the shower ID at the beginning of shower
-        if (recoOpt->fDrawShowers >= 100) std::string s = std::to_string(id) + "(" + std::to_string(hits.size()) + "h)";
+	std::string s = std::to_string(id);
+        if (recoOpt->fDrawShowers >= 100) s = s + "(" + std::to_string(hits.size()) + "h)";
         char const* txt = s.c_str();
         double tick = 30 + detProp.ConvertXToTicks(startPos.X(), planeID);
         double wire = geo->WireCoordinate(localPos, planeID);
