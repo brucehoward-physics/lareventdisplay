@@ -779,86 +779,86 @@ namespace evd {
             slcID_txt.SetTextSize(0.05);
             slcID_txt.SetTextColor(color);
           } // draw ID
-	  if (recoOpt->fDrawSlices >= 99) {
-	    // BH: Draw opt 99 is for a Pandora pass, where the slice will also be expected to have a primary vertex
-	    //
-	    // This part to get the primary in the slice and its vertex is basically borrowed/stolen from sbncode/CAFMaker/CAFMaker_module.cxx
-	    // a -- this part gets the pfparticles
-	    std::vector<art::Ptr<recob::Slice>> sliceList {slices[isl]};
-	    art::FindManyP<recob::PFParticle> findManyPFParts(sliceList, evt, which);
-	    std::vector<art::Ptr<recob::PFParticle>> fmPFPart;
-	    if (findManyPFParts.isValid()) {
-	      fmPFPart = findManyPFParts.at(0);
-	    }
-	    else {
-	      //std::cout << "Debug info for slice mode 99" << std::endl;
-	      //std::cout << " findManyPFParts not valid" << std::endl;
-	      //std::cout << " for slice " << std::to_string(slcID) << " with color " << color << std::endl;
-	      //std::cout << "----------------------------" << std::endl;
-	      continue;
-	    }
-	    // b -- this part gets the vertex
-	    art::FindManyP<recob::Vertex> fmVertex(fmPFPart, evt, which);
-	    if (!fmVertex.isValid()) {
-	      //std::cout << "Debug info for slice mode 99" << std::endl;
-	      //std::cout << " fmVertex not valid" << std::endl;
-	      //std::cout << " for slice " << std::to_string(slcID) << " with color " << color << std::endl;
-	      //std::cout << "----------------------------" << std::endl;
-	      continue;
+	        if (recoOpt->fDrawSlices >= 99) {
+            // BH: Draw opt 99 is for a Pandora pass, where the slice will also be expected to have a primary vertex
+            //
+            // This part to get the primary in the slice and its vertex is basically borrowed/stolen from sbncode/CAFMaker/CAFMaker_module.cxx
+            // a -- this part gets the pfparticles
+            std::vector<art::Ptr<recob::Slice>> sliceList {slices[isl]};
+            art::FindManyP<recob::PFParticle> findManyPFParts(sliceList, evt, which);
+            std::vector<art::Ptr<recob::PFParticle>> fmPFPart;
+            if (findManyPFParts.isValid()) {
+	            fmPFPart = findManyPFParts.at(0);
+    	      }
+            else {
+              //std::cout << "Debug info for slice mode 99" << std::endl;
+              //std::cout << " findManyPFParts not valid" << std::endl;
+              //std::cout << " for slice " << std::to_string(slcID) << " with color " << color << std::endl;
+              //std::cout << "----------------------------" << std::endl;
+              continue;
             }
-	    size_t iPart;
-	    for (iPart = 0; iPart < fmPFPart.size(); ++iPart ) {
-	      const recob::PFParticle &thisParticle = *fmPFPart[iPart];
-	      if (thisParticle.IsPrimary()) break;
-	    }
-	    const recob::Vertex *vertex = (iPart == fmPFPart.size() || !fmVertex.at(iPart).size()) ? NULL : fmVertex.at(iPart).at(0).get();
-	    if (!vertex) {
-	      //std::cout << "Debug info for slice mode 99" << std::endl;
-	      //std::cout << " NO vertex for slice " << std::to_string(slcID) << std::endl;
-	      //std::cout << " with color " << color << std::endl;
-	      //std::cout << "----------------------------" << std::endl;
-	      continue;
-	    }
-	    // Now, let's use our position as the vertex position
-	    geo::Point_t slicePos(vertex->position().X(), vertex->position().Y(), vertex->position().Z());
-	    // Now, we can follow a path like above
-	    double tick = detProp.ConvertXToTicks(vertex->position().X(), planeID);
+            // b -- this part gets the vertex
+            art::FindManyP<recob::Vertex> fmVertex(fmPFPart, evt, which);
+            if (!fmVertex.isValid()) {
+              //std::cout << "Debug info for slice mode 99" << std::endl;
+              //std::cout << " fmVertex not valid" << std::endl;
+              //std::cout << " for slice " << std::to_string(slcID) << " with color " << color << std::endl;
+              //std::cout << "----------------------------" << std::endl;
+              continue;
+            }
+            size_t iPart;
+            for (iPart = 0; iPart < fmPFPart.size(); ++iPart ) {
+              const recob::PFParticle &thisParticle = *fmPFPart[iPart];
+              if (thisParticle.IsPrimary()) break;
+            }
+            const recob::Vertex *vertex = (iPart == fmPFPart.size() || !fmVertex.at(iPart).size()) ? NULL : fmVertex.at(iPart).at(0).get();
+            if (!vertex) {
+              //std::cout << "Debug info for slice mode 99" << std::endl;
+              //std::cout << " NO vertex for slice " << std::to_string(slcID) << std::endl;
+              //std::cout << " with color " << color << std::endl;
+              //std::cout << "----------------------------" << std::endl;
+              continue;
+            }
+            // Now, let's use our position as the vertex position
+            geo::Point_t slicePos(vertex->position().X(), vertex->position().Y(), vertex->position().Z());
+            // Now, we can follow a path like above
+            double tick = detProp.ConvertXToTicks(vertex->position().X(), planeID);
             double wire = geo->WireCoordinate(slicePos, planeID);
-	    std::string s = std::to_string(slcID);
-	    // If drawOpt == 100, then also enter what slice corresponds to (also takes from the SBNCode CAFMaker_module)
-	    if (recoOpt->fDrawSlices == 100) {
-	      art::FindManyP<larpandoraobj::PFParticleMetadata> fmPFPMeta(fmPFPart, evt, which);
-	      if (!fmPFPMeta.isValid()) {
-		continue;
-	      }
-	      const larpandoraobj::PFParticleMetadata *primary_meta = (iPart == fmPFPart.size()) ? NULL : fmPFPMeta.at(iPart).at(0).get();
-	      if (!primary_meta) {
-		continue;
-	      }
-	      auto const &properties = primary_meta->GetPropertiesMap();
-	      if (properties.count("IsClearCosmic")) {
-		assert(!properties.count("IsNeutrino"));
-		s+=" (CC)";
-	      }
-	      else {
-		assert(properties.count("IsNeutrino"));
-		s+=" (Nu)";
-	      }
-	    }
+            std::string s = std::to_string(slcID);
+            // If drawOpt >= 100, then also enter what slice corresponds to (also takes from the SBNCode CAFMaker_module)
+            if (recoOpt->fDrawSlices >= 100) {
+              art::FindManyP<larpandoraobj::PFParticleMetadata> fmPFPMeta(fmPFPart, evt, which);
+              if (!fmPFPMeta.isValid()) {
+                continue;
+              }
+              const larpandoraobj::PFParticleMetadata *primary_meta = (iPart == fmPFPart.size()) ? NULL : fmPFPMeta.at(iPart).at(0).get();
+              if (!primary_meta) {
+                continue;
+              }
+              auto const &properties = primary_meta->GetPropertiesMap();
+              if (properties.count("IsClearCosmic")) {
+                assert(!properties.count("IsNeutrino"));
+                s+=" (CC)";
+              }
+              else {
+                assert(properties.count("IsNeutrino"));
+                s+=" (Nu)";
+              }
+            }
             char const* txt = s.c_str();
             TText& slcID_txt = view->AddText(wire, tick, txt);
             slcID_txt.SetTextSize(0.1);
             slcID_txt.SetTextColor(color);
-	    // Print debug info
-	    //std::cout << "Debug info for slice mode 99" << std::endl;
-	    //std::cout << "Drawing slice " << s << " with position:" << std::endl;
-	    //std::cout << "  Plane = " << planeID << std::endl;
-	    //std::cout << "  X,Y,Z = " << slicePos.X() << ", " << slicePos.Y() << ", " << slicePos.Z() << std::endl;
-	    //std::cout << "  Wire  = " << wire << std::endl;
-	    //std::cout << "  Tick  = " << tick << std::endl;
-	    //std::cout << "and its color is: " << color << std::endl;
-	    //std::cout << "----------------------------" << std::endl;
-	  } // draw ID pandora
+            // Print debug info
+            //std::cout << "Debug info for slice mode 99" << std::endl;
+            //std::cout << "Drawing slice " << s << " with position:" << std::endl;
+            //std::cout << "  Plane = " << planeID << std::endl;
+            //std::cout << "  X,Y,Z = " << slicePos.X() << ", " << slicePos.Y() << ", " << slicePos.Z() << std::endl;
+            //std::cout << "  Wire  = " << wire << std::endl;
+            //std::cout << "  Tick  = " << tick << std::endl;
+            //std::cout << "and its color is: " << color << std::endl;
+            //std::cout << "----------------------------" << std::endl;
+          } // draw ID pandora
         }
         else {
           // draw the center, end points and direction vector
