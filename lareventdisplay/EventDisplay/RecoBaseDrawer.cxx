@@ -760,8 +760,25 @@ namespace evd {
       for (size_t isl = 0; isl < slices.size(); ++isl) {
         int slcID(std::abs(slices[isl]->ID()));
         int color(evd::kColor[slcID % evd::kNCOLS]);
-        bool passCC = true;
         if (recoOpt->fDrawSlices < 3 || recoOpt->fDrawSlices>=99) {
+          // draw color-coded hits
+          std::vector<const recob::Hit*> hits = fmh.at(isl);
+          std::vector<const recob::Hit*> hits_on_plane;
+          for (auto hit : hits) {
+            if (hit->WireID().Plane == plane) { hits_on_plane.push_back(hit); }
+          }
+          if (this->Hit2D(hits_on_plane, color, view, false, false) < 1) continue;
+          if (recoOpt->fDrawSlices == 2) {
+            geo::Point_t slicePos(
+              slices[isl]->Center().X(), slices[isl]->Center().Y(), slices[isl]->Center().Z());
+            double tick = detProp.ConvertXToTicks(slices[isl]->Center().X(), planeID);
+            double wire = geo->WireCoordinate(slicePos, planeID);
+            std::string s = std::to_string(slcID);
+            char const* txt = s.c_str();
+            TText& slcID_txt = view->AddText(wire, tick, txt);
+            slcID_txt.SetTextSize(0.05);
+            slcID_txt.SetTextColor(color);
+          } // draw ID
 	        if (recoOpt->fDrawSlices >= 99) {
             // BH: Draw opt 99 is for a Pandora pass, where the slice will also be expected to have a primary vertex
             //
@@ -822,7 +839,6 @@ namespace evd {
               if (properties.count("IsClearCosmic")) {
                 assert(!properties.count("IsNeutrino"));
                 s+=" (CC)";
-                passCC = false;
               }
               else {
                 assert(properties.count("IsNeutrino"));
@@ -843,26 +859,6 @@ namespace evd {
             //std::cout << "and its color is: " << color << std::endl;
             //std::cout << "----------------------------" << std::endl;
           } // draw ID pandora
-          // draw color-coded hits
-          std::vector<const recob::Hit*> hits = fmh.at(isl);
-          std::vector<const recob::Hit*> hits_on_plane;
-          for (auto hit : hits) {
-            if (hit->WireID().Plane == plane) { hits_on_plane.push_back(hit); }
-          }
-          int slc_draw_color = (passCC || recoOpt->fDrawSlices!=101) ? color : 1;
-          if (this->Hit2D(hits_on_plane, slc_draw_color, view, false, false) < 1) continue;
-          if (recoOpt->fDrawSlices == 2) {
-            geo::Point_t slicePos(
-              slices[isl]->Center().X(), slices[isl]->Center().Y(), slices[isl]->Center().Z());
-            double tick = detProp.ConvertXToTicks(slices[isl]->Center().X(), planeID);
-            double wire = geo->WireCoordinate(slicePos, planeID);
-            std::string s = std::to_string(slcID);
-            char const* txt = s.c_str();
-            TText& slcID_txt = view->AddText(wire, tick, txt);
-            slcID_txt.SetTextSize(0.05);
-            slcID_txt.SetTextColor(color);
-          } // draw ID
-
         }
         else {
           // draw the center, end points and direction vector
