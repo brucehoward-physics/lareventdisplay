@@ -1883,7 +1883,7 @@ namespace evd {
 
       double local[3] = {0., 0., 0.};
       double world[3] = {0., 0., 0.};
-      const geo::TPCGeo& tpc = geo->TPC(rawOpt->fTPC);
+      const geo::TPCGeo& tpc = geo->TPC(rawOpt->fTPC, rawOpt->fCryostat); // BH: need cryo too
       tpc.LocalToWorld(local, world);
       double minxyz[3], maxxyz[3];
       minxyz[0] = world[0] - geo->DetHalfWidth(rawOpt->fTPC, rawOpt->fCryostat);
@@ -1908,7 +1908,7 @@ namespace evd {
           geo->WireCoordinate(localPos, geo::PlaneID(rawOpt->fCryostat, rawOpt->fTPC, plane));
         double time = detProp.ConvertXToTicks(xyz[0], plane, rawOpt->fTPC, rawOpt->fCryostat);
         int color = evd::kColor[vertex[v]->ID() % evd::kNCOLS];
-        TMarker& strt = view->AddMarker(wire, time, color, 24, 1.0);
+        TMarker& strt = ( recoOpt->fDrawVertices<100 ) ? view->AddMarker(wire, time, color, 24, 1.0) : view->AddMarker(wire, time, color, 8, 1.9); // BH: add another option
         strt.SetMarkerColor(color);
 
         // BB: draw the vertex ID
