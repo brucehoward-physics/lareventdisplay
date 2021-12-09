@@ -6,8 +6,8 @@ defaultqual	e20
 fcldir		product_dir	job
 #
 product         version
-larpandora      v09_09_05
-nuevdb          v1_05_05
+larpandora      v09_10_02
+nuevdb          v1_05_06
 cetbuildtools   v8_18_05	-	only_for_build
 end_product_list
 
