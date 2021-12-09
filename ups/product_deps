@@ -6,13 +6,13 @@ defaultqual	e20
 fcldir		product_dir	job
 #
 product         version
-larreco         v09_07_05
+larpandora      v09_09_05
 nuevdb          v1_05_05
 cetbuildtools   v8_18_05	-	only_for_build
 end_product_list
 
 
-qualifier	larreco         nuevdb
+qualifier	larpandora         nuevdb
 e20:debug	e20:debug	e20:debug
 e20:prof	e20:prof	e20:prof
 e19:debug	e19:debug	e19:debug
