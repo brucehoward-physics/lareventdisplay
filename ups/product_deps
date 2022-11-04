@@ -90,15 +90,6 @@ parent		lareventdisplay
 defaultqual	e20
 ####################################
 
-####################################
-# Directory specifications.
-#
-# These optional definitions specify the installed directories where
-# various files headers, libraries, and executables will be found. Some
-# have defaults; others must be specified if files of that type are to
-# be installed. Minimize configuration complexity by using only those
-# definitions necessary for the package.
-#
 ##################
 # Notes:
 #
@@ -247,7 +238,7 @@ fcldir	product_dir	job
 #
 ####################################
 product		version		qual	flags		<table_format=2>
-larreco		v09_14_00	-
+larpandora	v09_14_00	-
 nuevdb		v1_06_03	-
 cetmodules	v3_20_00	-	only_for_build
 end_product_list
@@ -304,7 +295,7 @@ end_product_list
 #   case it is optional.
 #
 ####################################
-qualifier	larreco		nuevdb
+qualifier	larpandora     	nuevdb
 c7:debug	c7:debug	c7:debug
 c7:prof		c7:prof		c7:prof
 e19:debug	e19:debug	e19:debug

@@ -38,6 +38,7 @@
 #include "lardataobj/RecoBase/OpFlash.h"
 #include "lardataobj/RecoBase/PCAxis.h"
 #include "lardataobj/RecoBase/PFParticle.h"
+#include "lardataobj/RecoBase/PFParticleMetadata.h"
 #include "lardataobj/RecoBase/Seed.h"
 #include "lardataobj/RecoBase/Shower.h"
 #include "lardataobj/RecoBase/SpacePoint.h"
@@ -61,6 +62,7 @@
 #include "art/Framework/Services/Registry/ServiceHandle.h"
 #include "art/Utilities/make_tool.h"
 #include "canvas/Persistency/Common/FindMany.h"
+#include "canvas/Persistency/Common/FindManyP.h"
 #include "canvas/Persistency/Common/Ptr.h"
 #include "canvas/Persistency/Common/PtrVector.h"
 #include "cetlib_except/exception.h"
@@ -749,7 +751,7 @@ namespace evd {
       for (size_t isl = 0; isl < slices.size(); ++isl) {
         int slcID(std::abs(slices[isl]->ID()));
         int color(evd::kColor[slcID % evd::kNCOLS]);
-        if (recoOpt->fDrawSlices < 3) {
+        if (recoOpt->fDrawSlices < 3 || recoOpt->fDrawSlices>=99) {
           // draw color-coded hits
           std::vector<const recob::Hit*> hits = fmh.at(isl);
           std::vector<const recob::Hit*> hits_on_plane;
@@ -764,10 +766,90 @@ namespace evd {
             double wire = geo->WireCoordinate(slicePos, planeID);
             std::string s = std::to_string(slcID);
             char const* txt = s.c_str();
-            TText& slcID = view->AddText(wire, tick, txt);
-            slcID.SetTextSize(0.05);
-            slcID.SetTextColor(color);
+            TText& slcID_txt = view->AddText(wire, tick, txt);
+            slcID_txt.SetTextSize(0.05);
+            slcID_txt.SetTextColor(color);
           } // draw ID
+	        if (recoOpt->fDrawSlices >= 99) {
+            // BH: Draw opt 99 is for a Pandora pass, where the slice will also be expected to have a primary vertex
+            //
+            // This part to get the primary in the slice and its vertex is basically borrowed/stolen from sbncode/CAFMaker/CAFMaker_module.cxx
+            // a -- this part gets the pfparticles
+            std::vector<art::Ptr<recob::Slice>> sliceList {slices[isl]};
+            art::FindManyP<recob::PFParticle> findManyPFParts(sliceList, evt, which);
+            std::vector<art::Ptr<recob::PFParticle>> fmPFPart;
+            if (findManyPFParts.isValid()) {
+	            fmPFPart = findManyPFParts.at(0);
+    	      }
+            else {
+              //std::cout << "Debug info for slice mode 99" << std::endl;
+              //std::cout << " findManyPFParts not valid" << std::endl;
+              //std::cout << " for slice " << std::to_string(slcID) << " with color " << color << std::endl;
+              //std::cout << "----------------------------" << std::endl;
+              continue;
+            }
+            // b -- this part gets the vertex
+            art::FindManyP<recob::Vertex> fmVertex(fmPFPart, evt, which);
+            if (!fmVertex.isValid()) {
+              //std::cout << "Debug info for slice mode 99" << std::endl;
+              //std::cout << " fmVertex not valid" << std::endl;
+              //std::cout << " for slice " << std::to_string(slcID) << " with color " << color << std::endl;
+              //std::cout << "----------------------------" << std::endl;
+              continue;
+            }
+            size_t iPart;
+            for (iPart = 0; iPart < fmPFPart.size(); ++iPart ) {
+              const recob::PFParticle &thisParticle = *fmPFPart[iPart];
+              if (thisParticle.IsPrimary()) break;
+            }
+            const recob::Vertex *vertex = (iPart == fmPFPart.size() || !fmVertex.at(iPart).size()) ? NULL : fmVertex.at(iPart).at(0).get();
+            if (!vertex) {
+              //std::cout << "Debug info for slice mode 99" << std::endl;
+              //std::cout << " NO vertex for slice " << std::to_string(slcID) << std::endl;
+              //std::cout << " with color " << color << std::endl;
+              //std::cout << "----------------------------" << std::endl;
+              continue;
+            }
+            // Now, let's use our position as the vertex position
+            geo::Point_t slicePos(vertex->position().X(), vertex->position().Y(), vertex->position().Z());
+            // Now, we can follow a path like above
+            double tick = detProp.ConvertXToTicks(vertex->position().X(), planeID);
+            double wire = geo->WireCoordinate(slicePos, planeID);
+            std::string s = std::to_string(slcID);
+            // If drawOpt >= 100, then also enter what slice corresponds to (also takes from the SBNCode CAFMaker_module)
+            if (recoOpt->fDrawSlices >= 100) {
+              art::FindManyP<larpandoraobj::PFParticleMetadata> fmPFPMeta(fmPFPart, evt, which);
+              if (!fmPFPMeta.isValid()) {
+                continue;
+              }
+              const larpandoraobj::PFParticleMetadata *primary_meta = (iPart == fmPFPart.size()) ? NULL : fmPFPMeta.at(iPart).at(0).get();
+              if (!primary_meta) {
+                continue;
+              }
+              auto const &properties = primary_meta->GetPropertiesMap();
+              if (properties.count("IsClearCosmic")) {
+                assert(!properties.count("IsNeutrino"));
+                s+=" (CC)";
+              }
+              else {
+                assert(properties.count("IsNeutrino"));
+                s+=" (Nu)";
+              }
+            }
+            char const* txt = s.c_str();
+            TText& slcID_txt = view->AddText(wire, tick, txt);
+            slcID_txt.SetTextSize(0.1);
+            slcID_txt.SetTextColor(color);
+            // Print debug info
+            //std::cout << "Debug info for slice mode 99" << std::endl;
+            //std::cout << "Drawing slice " << s << " with position:" << std::endl;
+            //std::cout << "  Plane = " << planeID << std::endl;
+            //std::cout << "  X,Y,Z = " << slicePos.X() << ", " << slicePos.Y() << ", " << slicePos.Z() << std::endl;
+            //std::cout << "  Wire  = " << wire << std::endl;
+            //std::cout << "  Tick  = " << tick << std::endl;
+            //std::cout << "and its color is: " << color << std::endl;
+            //std::cout << "----------------------------" << std::endl;
+          } // draw ID pandora
         }
         else {
           // draw the center, end points and direction vector
@@ -1249,7 +1331,8 @@ namespace evd {
       this->Hit2D(hits, color, view, false, false, lineWidth);
       if (recoOpt->fDrawShowers >= 1) {
         //draw the shower ID at the beginning of shower
-        std::string s = std::to_string(id);
+	std::string s = std::to_string(id);
+        if (recoOpt->fDrawShowers >= 100) s = s + "(" + std::to_string(hits.size()) + "h)";
         char const* txt = s.c_str();
         double tick = 30 + detProp.ConvertXToTicks(startPos.X(), planeID);
         double wire = geo->WireCoordinate(localPos, planeID);
@@ -1435,6 +1518,18 @@ namespace evd {
             TText& trkID = view->AddText(wire, tick, txt);
             trkID.SetTextColor(evd::kColor[tid % evd::kNCOLS]);
             trkID.SetTextSize(0.1);
+
+            // BH: also draw it at the beginning (exactly as above) - useful if crossing cathode
+            if (recoOpt->fDrawTracks >= 99) {
+              geo::Point_t trackPosSt(track.vals().at(t)->Start().X(),
+                                      track.vals().at(t)->Start().Y(),
+                                      track.vals().at(t)->Start().Z());
+              double tickSt = 30 + detProp.ConvertXToTicks(trackPosSt.X(), plane, tpc, cstat);
+              double wireSt = geo->WireCoordinate(trackPosSt, geo::PlaneID(cstat, tpc, plane));
+              TText& trkIDSt = view->AddText(wireSt, tickSt, txt);
+              trkIDSt.SetTextColor(evd::kColor[tid % evd::kNCOLS]);
+              trkIDSt.SetTextSize(0.1);
+            }
           }
 
           float Score = -999;
@@ -1769,7 +1864,7 @@ namespace evd {
 
       double local[3] = {0., 0., 0.};
       double world[3] = {0., 0., 0.};
-      const geo::TPCGeo& tpc = geo->TPC(rawOpt->fTPC);
+      const geo::TPCGeo& tpc = geo->TPC(rawOpt->fTPC, rawOpt->fCryostat); // BH: need cryo too
       tpc.LocalToWorld(local, world);
       double minxyz[3], maxxyz[3];
       minxyz[0] = world[0] - geo->DetHalfWidth(rawOpt->fTPC, rawOpt->fCryostat);
@@ -1794,7 +1889,7 @@ namespace evd {
           geo->WireCoordinate(localPos, geo::PlaneID(rawOpt->fCryostat, rawOpt->fTPC, plane));
         double time = detProp.ConvertXToTicks(xyz[0], plane, rawOpt->fTPC, rawOpt->fCryostat);
         int color = evd::kColor[vertex[v]->ID() % evd::kNCOLS];
-        TMarker& strt = view->AddMarker(wire, time, color, 24, 1.0);
+        TMarker& strt = ( recoOpt->fDrawVertices<100 ) ? view->AddMarker(wire, time, color, 24, 1.0) : view->AddMarker(wire, time, color, 8, 1.9); // BH: add another option
         strt.SetMarkerColor(color);
 
         // BB: draw the vertex ID
