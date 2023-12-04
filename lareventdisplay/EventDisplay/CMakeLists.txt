@@ -151,6 +151,7 @@ cet_make_library(SOURCE
   ROOT::Gui
   ROOT::Hist
   ROOT::MathCore
+  larpandora::LArPandoraInterface
 )
 
 add_subdirectory(ExptDrawers)

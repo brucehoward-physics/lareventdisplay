@@ -30,6 +30,7 @@ find_package(lardataalg REQUIRED EXPORT)
 find_package(lardataobj REQUIRED EXPORT)
 find_package(larcorealg REQUIRED EXPORT)
 find_package(larcoreobj REQUIRED EXPORT)
+find_package(larpandora REQUIRED EXPORT)
 
 find_package(art_root_io REQUIRED EXPORT)
 find_package(canvas_root_io REQUIRED EXPORT)
